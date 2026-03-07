@@ -1,0 +1,44 @@
+app = "drug-rag-api" # أو أي اسم اخترته لتطبيقك
+
+[build]
+  # هذا هو أمر البناء. نستخدم pip لتثبيت المتطلبات.
+  [build.args]
+    BUILD_COMMAND = "pip install -r requirements.txt"
+
+[http_service]
+  internal_port = 8080 # المنفذ الذي يستخدمه Gunicorn داخل الحاوية
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"] # اسم العملية، يمكنك تسميته كما تريد
+
+[[services]]
+  http_checks = []
+  internal_port = 8080
+  processes = ["app"]
+  protocol = "tcp"
+  script_checks = []
+
+  [services.concurrency]
+    hard_limit = 25
+    soft_limit = 20
+    type = "connections"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+  [[services.tcp_checks]]
+    grace_period = "1s"
+    interval = "15s"
+    restart_limit = 0
+    timeout = "2s"
+
+[processes]
+  # هذا هو أمر التشغيل. نستخدم Gunicorn لتشغيل تطبيق Flask.
+  app = "gunicorn app:app --bind 0.0.0.0:8080"
