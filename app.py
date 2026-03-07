@@ -6,9 +6,15 @@ import os
 
 app = Flask(__name__)
 
-# تحميل قاعدة البيانات مرة واحدة عند بدء التشغيل
-print("🔄 جاري تحميل قاعدة البيانات...")
-embeddings = HuggingFaceEmbeddings(model_name="paraphrase-multilingual-MiniLM-L12-v2")
+# -------------------- إعداد النموذج --------------------
+# اختر النموذج المناسب:
+# - all-MiniLM-L6-v2: نموذج صغير (80 MB) - أسرع وأقل استهلاكاً للذاكرة (مفعل حالياً)
+# - paraphrase-multilingual-MiniLM-L12-v2: نموذج كبير (470 MB) - أدق لكنه يستهلك ذاكرة أكبر
+MODEL_NAME = "all-MiniLM-L6-v2"  # <-- غيّر هذا السطر فقط للعودة للنموذج الكبير
+# -------------------------------------------------------
+
+print(f"🔄 جاري تحميل قاعدة البيانات باستخدام النموذج: {MODEL_NAME}...")
+embeddings = HuggingFaceEmbeddings(model_name=MODEL_NAME)
 db = FAISS.load_local("drug_database", embeddings, allow_dangerous_deserialization=True)
 print("✅ قاعدة البيانات جاهزة!")
 
@@ -41,7 +47,7 @@ def ask():
 
 @app.route('/', methods=['GET'])
 def home():
-    return "✅ API شغال! أرسل POST request إلى /ask"
+    return f"✅ API شغال! النموذج المستخدم: {MODEL_NAME}. أرسل POST request إلى /ask"
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
