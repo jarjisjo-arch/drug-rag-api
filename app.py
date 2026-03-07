@@ -6,26 +6,31 @@ import os
 
 app = Flask(__name__)
 
-# -------------------- إعداد النموذج --------------------
-# اختر النموذج المناسب:
-# - all-MiniLM-L6-v2: نموذج صغير (80 MB) - أسرع وأقل استهلاكاً للذاكرة (مفعل حالياً)
-# - paraphrase-multilingual-MiniLM-L12-v2: نموذج كبير (470 MB) - أدق لكنه يستهلك ذاكرة أكبر
-MODEL_NAME = "all-MiniLM-L6-v2"  # <-- غيّر هذا السطر فقط للعودة للنموذج الكبير
-# -------------------------------------------------------
+# -------------------- النموذج الأصلي (الكبير) --------------------
+MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
+# ----------------------------------------------------------------
 
 print(f"🔄 جاري تحميل قاعدة البيانات باستخدام النموذج: {MODEL_NAME}...")
-embeddings = HuggingFaceEmbeddings(model_name=MODEL_NAME)
-db = FAISS.load_local("drug_database", embeddings, allow_dangerous_deserialization=True)
-print("✅ قاعدة البيانات جاهزة!")
+try:
+    embeddings = HuggingFaceEmbeddings(model_name=MODEL_NAME)
+    # المسار المطلق لـ PythonAnywhere (غير jarjisjo لاسم مستخدمك)
+    db = FAISS.load_local("/home/jarjisjo/drug_database", embeddings, allow_dangerous_deserialization=True)
+    print("✅ قاعدة البيانات جاهزة!")
+except Exception as e:
+    print(f"❌ فشل تحميل قاعدة البيانات: {e}")
+    db = None
 
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "sk-08cb0518f2de46359748c8413fb46ee7")
 
 @app.route('/ask', methods=['POST'])
 def ask():
+    if db is None:
+        return jsonify({'error': 'قاعدة البيانات غير متوفرة'}), 500
+    
     data = request.json
     question = data.get('question', '')
     
-    docs = db.similarity_search(question, k=5)
+    docs = db.similarity_search(question, k=3)
     context = "\n---\n".join([doc.page_content for doc in docs])
     
     response = requests.post(
@@ -47,7 +52,10 @@ def ask():
 
 @app.route('/', methods=['GET'])
 def home():
-    return f"✅ API شغال! النموذج المستخدم: {MODEL_NAME}. أرسل POST request إلى /ask"
+    status = "✅" if db else "❌"
+    return f"{status} API شغال! النموذج المستخدم: {MODEL_NAME}. قاعدة البيانات: {'جاهزة' if db else 'غير متوفرة'}"
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
+    # PythonAnywhere لا يحتاج هذا الجزء، لكن نتركه للتوافق
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
