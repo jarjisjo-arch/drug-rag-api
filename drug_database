@@ -1,0 +1,11 @@
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+
+# تحميل النموذج
+embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+
+# افترض أن لديك docs من Notebook
+db = FAISS.from_documents(docs, embeddings)
+
+# حفظ قاعدة البيانات محليًا
+db.save_local("drug_database")
